@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"bufio"
-	"fmt"
 	"log"
 	"os"
 )
@@ -21,7 +19,7 @@ func ListAllFolders(folderName string) []string {
 	return listFolders
 }
 
-// Lista cada uno de los archivos o correos
+// list all files in a folder
 func ListFiles(folderName string) []string {
 	files, err := os.ReadDir(folderName)
 	if err != nil {
@@ -36,25 +34,25 @@ func ListFiles(folderName string) []string {
 	return fileNames
 }
 
-func JSONfinal(datos []string) {
-	file, err := os.Create("jSonFinal.json")
-	if err != nil {
-		log.Fatalf("failed creating file: %s", err)
-	}
-	defer file.Close() // Ensure file is closed
+// func JSONfinal(datos []string) {
+// 	file, err := os.Create("jSonFinal.json")
+// 	if err != nil {
+// 		log.Fatalf("failed creating file: %s", err)
+// 	}
+// 	defer file.Close() // Ensure file is closed
 
-	// Use a buffered writer for better performance
-	writer := bufio.NewWriter(file)
-	defer writer.Flush()
+// 	// Use a buffered writer for better performance
+// 	writer := bufio.NewWriter(file)
+// 	defer writer.Flush()
 
-	writer.WriteString(`{"Enron-email": [`)
-	for i, dato := range datos {
-		if i > 0 {
-			writer.WriteString(",")
-		}
-		writer.WriteString(dato)
-	}
-	writer.WriteString("]}")
+// 	writer.WriteString(`{"Enron-email": [`)
+// 	for i, dato := range datos {
+// 		if i > 0 {
+// 			writer.WriteString(",")
+// 		}
+// 		writer.WriteString(dato)
+// 	}
+// 	writer.WriteString("]}")
 
-	fmt.Println("JSON File successfully created")
-}
+// 	fmt.Println("JSON File successfully created")
+// }

@@ -13,9 +13,6 @@ import (
 	"time"
 )
 
-//var jSonFinal []string //array donde se guardará todos los correos en forma de objetos.
-// List all folders
-
 func main() {
 	// Load configuration settings
 	config.LoadConfig()
@@ -89,6 +86,6 @@ func main() {
 	if err := pprof.WriteHeapProfile(mem); err != nil {
 		log.Fatal(err)
 	}
-	////Fin proceso de rendimiento de la aplicación/////////////
+	//go tool pprof -http=:8080 cpu.prof
 
 }
