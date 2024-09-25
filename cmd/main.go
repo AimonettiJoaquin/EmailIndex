@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime"
 	"runtime/pprof"
 	"sync"
 	"time"
@@ -18,10 +17,10 @@ import (
 // List all folders
 
 func main() {
-	// Load configuration
+	// Load configuration settings
 	config.LoadConfig()
 
-	// Start the CPU profiling
+	// Set up performance profiling
 	start := time.Now()
 	cpu, err := os.Create("cpu.prof")
 	if err != nil {
@@ -30,28 +29,32 @@ func main() {
 	pprof.StartCPUProfile(cpu)
 	defer pprof.StopCPUProfile()
 
+	// Get the path where emails are stored
 	path := config.AppConfig.EmailDataPath
-	fmt.Println("Indexando...")
+
+	// List all user folders
 	user_list := utils.ListAllFolders(path)
 
-	// Create a channel to receive email data
+	// Create a channel to send emails through
 	emailChan := make(chan model.Email, 1000)
 
-	// Create a WaitGroup to wait for all goroutines to finish
+	// Create a WaitGroup to keep track of running tasks
 	var wg sync.WaitGroup
 
-	// Start the indexing goroutine
+	// Start a goroutine to handle indexing emails
 	go model.BatchIndexData(emailChan)
 
+	// Loop through all users, folders, and email files
 	for _, user := range user_list {
 		folders := utils.ListAllFolders(path + user)
 		for _, folder := range folders {
 			mail_files := utils.ListFiles(path + user + "/" + folder + "/")
 			for _, mail_file := range mail_files {
+				// For each email file, start a new goroutine to process it
 				wg.Add(1)
 				go func(user, folder, mail_file string) {
 					defer wg.Done()
-					fmt.Println("Indexing: " + user + "/" + folder + "/" + mail_file)
+					// Open the file, parse the email, and send it to the channel
 					sys_file, err := os.Open(path + user + "/" + folder + "/" + mail_file)
 					if err != nil {
 						log.Printf("Error opening file %s: %v", mail_file, err)
@@ -65,17 +68,19 @@ func main() {
 			}
 		}
 	}
-	// Wait for all goroutines to finish
+
+	// Wait for all email processing to finish
 	wg.Wait()
 	// Close the email channel
 	close(emailChan)
-	//utils.JSONfinal(jSonFinal)
+
+	// Print finish message and duration
 	fmt.Println("Indexing finished!!!!")
 	// Calcular la duración del proceso
 	duration := time.Since(start)
 	fmt.Printf("El proceso tomó %v\n", duration)
-	//Proceso de rendimiento de la aplicación
-	runtime.GC()
+
+	// Perform memory profiling
 	mem, err := os.Create("memory.prof")
 	if err != nil {
 		log.Fatal(err)

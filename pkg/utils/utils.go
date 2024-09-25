@@ -1,37 +1,39 @@
 package utils
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
 )
 
-func ListAllFolders(folder_name string) []string { //recibe como parámetro el folder "maildir".
-	files, err := os.ReadDir(folder_name) //"ioutil.ReadDir" extrae todos los subfolders y los guarda en "files"
+func ListAllFolders(folderName string) []string {
+	files, err := os.ReadDir(folderName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var list_folders []string //array donde se guardarán las subcarpetas de "maildir"
+	listFolders := make([]string, 0, len(files)) // Pre-allocate slice
 	for _, f := range files {
-		if f.IsDir() { //Si es un directorio
-			list_folders = append(list_folders, f.Name()) //Guradmos el nombre de cada subfolder
+		if f.IsDir() {
+			listFolders = append(listFolders, f.Name())
 		}
-
 	}
-	return list_folders
+	return listFolders
 }
 
 // Lista cada uno de los archivos o correos
-func ListFiles(folder_name string) []string {
-	files, err := os.ReadDir(folder_name)
+func ListFiles(folderName string) []string {
+	files, err := os.ReadDir(folderName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var files_names []string //array donde se guardarán los nombres de los archivos contenidos en las subcarpetas.
+	fileNames := make([]string, 0, len(files)) // Pre-allocate slice
 	for _, file := range files {
-		files_names = append(files_names, file.Name())
+		if !file.IsDir() { // Only add files, not directories
+			fileNames = append(fileNames, file.Name())
+		}
 	}
-	return files_names
+	return fileNames
 }
 
 func JSONfinal(datos []string) {
@@ -39,17 +41,20 @@ func JSONfinal(datos []string) {
 	if err != nil {
 		log.Fatalf("failed creating file: %s", err)
 	}
-	file.WriteString("{")
-	file.WriteString(`"Enron-email"` + ": [")
-	for index := range datos {
-		file.WriteString(datos[index])
-		if index == len(datos)-1 {
-			file.WriteString("]")
-			file.WriteString("}")
-		} else {
-			file.WriteString(",")
+	defer file.Close() // Ensure file is closed
+
+	// Use a buffered writer for better performance
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	writer.WriteString(`{"Enron-email": [`)
+	for i, dato := range datos {
+		if i > 0 {
+			writer.WriteString(",")
 		}
+		writer.WriteString(dato)
 	}
-	file.Close()
+	writer.WriteString("]}")
+
 	fmt.Println("JSON File successfully created")
 }

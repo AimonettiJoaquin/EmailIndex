@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Estructura del json que contendrá cada correo.
+// Define the structure of an email
 type Email struct {
 	ID                        int    `json:"ID"`
 	Message_ID                string `json:"Message-ID"`
@@ -35,7 +35,8 @@ type Email struct {
 	Body                      string `json:"Body"`
 }
 
-func ParseData(data_lines *bufio.Scanner) Email {
+// Parse an email from a file
+func ParseData(dataLines *bufio.Scanner) Email {
 	var data Email
 	var bodyStarted bool
 	headerMap := map[string]*string{
@@ -57,29 +58,34 @@ func ParseData(data_lines *bufio.Scanner) Email {
 		"X-FileName:":                &data.X_FileName,
 	}
 
-	for data_lines.Scan() {
-		line := data_lines.Text()
+	var bodyBuilder strings.Builder
+
+	for dataLines.Scan() {
+		line := dataLines.Text()
 		if !bodyStarted {
+			if line == "" {
+				bodyStarted = true
+				continue
+			}
 			for prefix, field := range headerMap {
 				if strings.HasPrefix(line, prefix) {
 					*field = strings.TrimSpace(line[len(prefix):])
 					break
 				}
 			}
-			if line == "" {
-				bodyStarted = true
-			}
 		} else {
-			data.Body += line + "\n"
+			bodyBuilder.WriteString(line)
+			bodyBuilder.WriteString("\n")
 		}
 	}
+	data.Body = bodyBuilder.String()
 	return data
 }
 
-// BatchIndexData handles batch indexing of emails
+// Handle batch indexing of emails
 func BatchIndexData(emailChan <-chan Email) {
 	batchSize := config.AppConfig.BatchSize
-	var batch []Email
+	batch := make([]Email, 0, batchSize)
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -87,7 +93,6 @@ func BatchIndexData(emailChan <-chan Email) {
 		select {
 		case email, ok := <-emailChan:
 			if !ok {
-				// Channel closed, index remaining emails
 				if len(batch) > 0 {
 					indexBatch(batch)
 				}
@@ -107,7 +112,7 @@ func BatchIndexData(emailChan <-chan Email) {
 	}
 }
 
-// Esta función realiza una petición y envía los datos.
+// Send a batch of emails to the indexing service
 func indexBatch(batch []Email) {
 	user := config.AppConfig.ZincUser
 	password := config.AppConfig.ZincPassword
@@ -118,29 +123,22 @@ func indexBatch(batch []Email) {
 	zinc_url := zinc_host + "/api/" + index + "/_bulk"
 
 	var bulkRequestBody bytes.Buffer
+	encoder := json.NewEncoder(&bulkRequestBody)
+
 	for _, email := range batch {
-		// Add metadata line
 		metadata := map[string]interface{}{
 			"index": map[string]interface{}{
 				"_index": index,
 			},
 		}
-		metadataJSON, err := json.Marshal(metadata)
-		if err != nil {
-			log.Printf("Error marshaling metadata: %v", err)
+		if err := encoder.Encode(metadata); err != nil {
+			log.Printf("Error encoding metadata: %v", err)
 			continue
 		}
-		bulkRequestBody.Write(metadataJSON)
-		bulkRequestBody.WriteString("\n")
-
-		// Add document line
-		documentJSON, err := json.Marshal(email)
-		if err != nil {
-			log.Printf("Error marshaling email: %v", err)
+		if err := encoder.Encode(email); err != nil {
+			log.Printf("Error encoding email: %v", err)
 			continue
 		}
-		bulkRequestBody.Write(documentJSON)
-		bulkRequestBody.WriteString("\n")
 	}
 
 	req, err := http.NewRequest("POST", zinc_url, &bulkRequestBody)
