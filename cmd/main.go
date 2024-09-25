@@ -73,9 +73,9 @@ func main() {
 
 	// Print finish message and duration
 	fmt.Println("Indexing finished!!!!")
-	// Calcular la duración del proceso
+	// Calculate the duration of the process
 	duration := time.Since(start)
-	fmt.Printf("El proceso tomó %v\n", duration)
+	fmt.Printf("The process took %v\n", duration)
 
 	// Perform memory profiling
 	mem, err := os.Create("memory.prof")
