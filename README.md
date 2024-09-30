@@ -68,8 +68,10 @@ The application generates CPU and memory profiles:
 
 You can analyze these profiles using Go's pprof tool:
 
+```
 go tool pprof -http=:8080 cpu.prof
 go tool pprof -http=:8080 memory.prof
+```
 
 ## Project Structure
 
